@@ -10,8 +10,7 @@ export const Route = createFileRoute("/")({
       { title: "Haul Split — Superbuy Shipping Calculator" },
       {
         name: "description",
-        content:
-          "Step-by-step shipping cost calculator for Chinese warehouse agent hauls. Split EMS shipping with friends in CNY.",
+        content: "Step-by-step shipping cost calculator for superbuy hauls. Split EMS shipping with friends in CNY.",
       },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
     ],
