@@ -39,6 +39,7 @@ function Index() {
   ]);
   const [estimatedWeight, setEstimatedWeight] = useState("");
   const [serviceFees, setServiceFees] = useState("0");
+  const [agentTotalCost, setAgentTotalCost] = useState("");
 
   const line = SHIPPING_LINES.find((l) => l.id === lineId)!;
 
@@ -68,6 +69,7 @@ function Index() {
     setPeople([{ name: "You", weight: "" }, { name: "", weight: "" }]);
     setEstimatedWeight("");
     setServiceFees("0");
+    setAgentTotalCost("");
   };
 
   return (
@@ -96,10 +98,12 @@ function Index() {
                   setEstimatedWeight={setEstimatedWeight}
                   serviceFees={serviceFees}
                   setServiceFees={setServiceFees}
+                  agentTotalCost={agentTotalCost}
+                  setAgentTotalCost={setAgentTotalCost}
                   sumOfPeople={results.sumOfPeople}
                 />
               )}
-              {step === 4 && <StepResult line={line} results={results} />}
+              {step === 4 && <StepResult line={line} results={results} agentTotalCost={agentTotalCost} />}
             </motion.div>
           </AnimatePresence>
 
@@ -349,12 +353,16 @@ function StepEstimate({
   setEstimatedWeight,
   serviceFees,
   setServiceFees,
+  agentTotalCost,
+  setAgentTotalCost,
   sumOfPeople,
 }: {
   estimatedWeight: string;
   setEstimatedWeight: (v: string) => void;
   serviceFees: string;
   setServiceFees: (v: string) => void;
+  agentTotalCost: string;
+  setAgentTotalCost: (v: string) => void;
   sumOfPeople: number;
 }) {
   const est = parseFloat(estimatedWeight) || 0;
@@ -389,6 +397,15 @@ function StepEstimate({
             value={serviceFees}
             onChange={(v) => setServiceFees(v.replace(/[^\d.]/g, ""))}
             placeholder="0"
+            suffix="¥"
+            inputMode="decimal"
+          />
+        </Labeled>
+        <Labeled label="Agent's quoted total cost (optional, total ¥)">
+          <NbInput
+            value={agentTotalCost}
+            onChange={(v) => setAgentTotalCost(v.replace(/[^\d.]/g, ""))}
+            placeholder="e.g. 1450"
             suffix="¥"
             inputMode="decimal"
           />
@@ -431,10 +448,15 @@ function Mini({ label, value, highlight }: { label: string; value: string; highl
 function StepResult({
   line,
   results,
+  agentTotalCost,
 }: {
   line: ShippingLine;
   results: ReturnType<typeof computeShares>;
+  agentTotalCost: string;
 }) {
+  const agentCost = parseFloat(agentTotalCost) || 0;
+  const diff = agentCost - results.grandTotal;
+  const hasAgentCost = agentCost > 0;
   return (
     <div>
       <StepTitle q="Here's everyone's share" hint={`On ${line.name} · all prices in CNY`} />
@@ -476,6 +498,32 @@ function StepResult({
           <span className="font-mono text-xl text-primary">{fmt(results.grandTotal)}</span>
         </div>
       </div>
+
+      {hasAgentCost && (
+        <div
+          className="mt-3 border-2 border-foreground bg-surface p-4"
+          style={{ boxShadow: "var(--nb-shadow-sm)" }}
+        >
+          <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
+            <span>Agent quoted</span>
+            <span className="font-mono text-xl">{fmt(agentCost)}</span>
+          </div>
+          {Math.abs(diff) > 0.01 && (
+            <div
+              className={`mt-2 flex items-center justify-between border-2 border-foreground p-2 text-xs font-bold uppercase ${diff > 0 ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}
+            >
+              <span>{diff > 0 ? "Agent quoted higher by" : "You calculated higher by"}</span>
+              <span className="font-mono">{fmt(Math.abs(diff))}</span>
+            </div>
+          )}
+          {Math.abs(diff) <= 0.01 && (
+            <div className="mt-2 flex items-center justify-between border-2 border-foreground bg-accent p-2 text-xs font-bold uppercase text-accent-foreground">
+              <span>Matches agent quote</span>
+              <Check className="h-3.5 w-3.5" />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
