@@ -53,7 +53,10 @@ function Index() {
     if (step === 0) return !!lineId;
     if (step === 1) return people.length >= 1 && people.every((p) => p.name.trim().length > 0);
     if (step === 2) return people.every((p) => parseFloat(p.weight) > 0);
-    if (step === 3) return parseFloat(estimatedWeight) > 0;
+    if (step === 3) {
+      const est = parseFloat(estimatedWeight) || 0;
+      return est > 0 && est >= results.sumOfPeople;
+    }
     return true;
   })();
 
@@ -356,6 +359,7 @@ function StepEstimate({
 }) {
   const est = parseFloat(estimatedWeight) || 0;
   const diff = Math.max(0, est - sumOfPeople);
+  const tooLow = est > 0 && est < sumOfPeople;
   return (
     <div>
       <StepTitle
@@ -367,11 +371,19 @@ function StepEstimate({
           <NbInput
             value={estimatedWeight}
             onChange={(v) => setEstimatedWeight(v.replace(/[^\d.]/g, ""))}
-            placeholder="e.g. 12000"
+            placeholder={`Minimum ${sumOfPeople.toLocaleString()}`}
             suffix="g"
             inputMode="decimal"
           />
         </Labeled>
+        {tooLow && (
+          <div
+            className="border-2 border-foreground bg-primary p-3 text-xs font-bold text-primary-foreground"
+            style={{ boxShadow: "var(--nb-shadow-sm)" }}
+          >
+            Must be at least {sumOfPeople.toLocaleString()}g (sum of all items).
+          </div>
+        )}
         <Labeled label="Service fees (optional, total ¥)">
           <NbInput
             value={serviceFees}
@@ -449,7 +461,7 @@ function StepResult({
               <Tag label="Initial ÷" value={fmt(s.initialShare)} />
               <Tag label="Weight" value={fmt(s.weightCost)} />
               <Tag label="Op fee" value={fmt(s.opFee)} />
-              <Tag label="Extra ÷" value={fmt(s.diffShare + s.serviceShare)} />
+              <Tag label="Packaging weight" value={fmt(s.diffShare + s.serviceShare)} />
             </div>
           </motion.div>
         ))}
@@ -588,7 +600,7 @@ function computeShares(
     const w = weights[i];
     const billable = Math.max(0, w - coveredPerPerson);
     const weightCost = line.ratePer500g * (billable / 500);
-    const opFee = line.operationFee;
+    const opFee = line.operationFee / n;
     const total = initialShare + weightCost + opFee + diffShare + serviceShare;
     return {
       name: p.name || `Person ${i + 1}`,
