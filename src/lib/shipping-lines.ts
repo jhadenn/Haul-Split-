@@ -12,10 +12,10 @@ export const SHIPPING_LINES: ShippingLine[] = [
   {
     id: "ems-xn",
     name: "EMS-Preferential Line-XN",
-    description: "First 1kg ¥140/500g · then ¥48/500g",
+    description: "First 1kg ¥140/500g · then ¥38/500g",
     initialFee: 280, // 140 per 500g for the first kilo = 280
     initialCoveredGrams: 1000,
-    ratePer500g: 48,
+    ratePer500g: 38,
     operationFee: 8,
   },
   {
