@@ -7,7 +7,7 @@ import { SHIPPING_LINES, type ShippingLine } from "@/lib/shipping-lines";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Haul Split — Chinese Warehouse Shipping Calculator" },
+      { title: "Haul Split — Superbuy Shipping Calculator" },
       {
         name: "description",
         content:
