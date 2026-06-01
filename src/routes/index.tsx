@@ -69,6 +69,7 @@ function Index() {
     setPeople([{ name: "You", weight: "" }, { name: "", weight: "" }]);
     setEstimatedWeight("");
     setServiceFees("0");
+    setAgentTotalCost("");
   };
 
   return (
