@@ -148,7 +148,7 @@ function Header({ step }: { step: number }) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">HAUL SPLIT</h1>
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Chinese warehouse agent calculator
+            Superbuy shipping calculator
           </p>
         </div>
       </div>
