@@ -39,6 +39,7 @@ function Index() {
   ]);
   const [estimatedWeight, setEstimatedWeight] = useState("");
   const [serviceFees, setServiceFees] = useState("0");
+  const [agentTotalCost, setAgentTotalCost] = useState("");
 
   const line = SHIPPING_LINES.find((l) => l.id === lineId)!;
 
