@@ -353,12 +353,16 @@ function StepEstimate({
   setEstimatedWeight,
   serviceFees,
   setServiceFees,
+  agentTotalCost,
+  setAgentTotalCost,
   sumOfPeople,
 }: {
   estimatedWeight: string;
   setEstimatedWeight: (v: string) => void;
   serviceFees: string;
   setServiceFees: (v: string) => void;
+  agentTotalCost: string;
+  setAgentTotalCost: (v: string) => void;
   sumOfPeople: number;
 }) {
   const est = parseFloat(estimatedWeight) || 0;
@@ -393,6 +397,15 @@ function StepEstimate({
             value={serviceFees}
             onChange={(v) => setServiceFees(v.replace(/[^\d.]/g, ""))}
             placeholder="0"
+            suffix="¥"
+            inputMode="decimal"
+          />
+        </Labeled>
+        <Labeled label="Agent's quoted total cost (optional, total ¥)">
+          <NbInput
+            value={agentTotalCost}
+            onChange={(v) => setAgentTotalCost(v.replace(/[^\d.]/g, ""))}
+            placeholder="e.g. 1450"
             suffix="¥"
             inputMode="decimal"
           />
