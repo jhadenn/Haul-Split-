@@ -97,10 +97,12 @@ function Index() {
                   setEstimatedWeight={setEstimatedWeight}
                   serviceFees={serviceFees}
                   setServiceFees={setServiceFees}
+                  agentTotalCost={agentTotalCost}
+                  setAgentTotalCost={setAgentTotalCost}
                   sumOfPeople={results.sumOfPeople}
                 />
               )}
-              {step === 4 && <StepResult line={line} results={results} />}
+              {step === 4 && <StepResult line={line} results={results} agentTotalCost={agentTotalCost} />}
             </motion.div>
           </AnimatePresence>
 
