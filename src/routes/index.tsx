@@ -1,302 +1,607 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Package, Users, Scale, Ship, Plane, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, RotateCcw, Package } from "lucide-react";
 import { SHIPPING_LINES, type ShippingLine } from "@/lib/shipping-lines";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Haul Split — Chinese Warehouse Shipping Calculator" },
-      { name: "description", content: "Split shipping costs from your Chinese warehouse agent with friends. Fast, clean, in CNY." },
+      {
+        name: "description",
+        content:
+          "Step-by-step shipping cost calculator for Chinese warehouse agent hauls. Split EMS shipping with friends in CNY.",
+      },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
     ],
   }),
   component: Index,
 });
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", maximumFractionDigits: 2 }).format(
-    Number.isFinite(n) ? n : 0,
-  );
+  new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency: "CNY",
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(n) ? n : 0);
+
+type Person = { name: string; weight: string };
+
+const STEPS = ["Line", "People", "Weights", "Estimate", "Result"] as const;
 
 function Index() {
+  const [step, setStep] = useState(0);
   const [lineId, setLineId] = useState<string>(SHIPPING_LINES[0].id);
-  const [estimatedWeight, setEstimatedWeight] = useState<string>("");
-  const [people, setPeople] = useState<string>("2");
-  const [totalItemsWeight, setTotalItemsWeight] = useState<string>("");
-  const [yourWeight, setYourWeight] = useState<string>("");
-  const [serviceFees, setServiceFees] = useState<string>("0");
+  const [people, setPeople] = useState<Person[]>([
+    { name: "You", weight: "" },
+    { name: "", weight: "" },
+  ]);
+  const [estimatedWeight, setEstimatedWeight] = useState("");
+  const [serviceFees, setServiceFees] = useState("0");
 
   const line = SHIPPING_LINES.find((l) => l.id === lineId)!;
 
-  const calc = useMemo(() => {
-    const est = parseFloat(estimatedWeight) || 0;
-    const n = Math.max(1, parseInt(people) || 1);
-    const sumAll = parseFloat(totalItemsWeight) || 0;
-    const yours = parseFloat(yourWeight) || 0;
-    const fees = parseFloat(serviceFees) || 0;
+  const results = useMemo(() => computeShares(line, people, estimatedWeight, serviceFees), [
+    line,
+    people,
+    estimatedWeight,
+    serviceFees,
+  ]);
 
-    const initialShare = line.initialFee / n;
-    const yoursCost = line.ratePer500g * (yours / 500);
-    const diff = Math.max(0, est - sumAll);
-    const diffShareCost = (line.ratePer500g * (diff / 500)) / n;
-    const total = initialShare + yoursCost + fees + diffShareCost;
+  const canNext = (() => {
+    if (step === 0) return !!lineId;
+    if (step === 1) return people.length >= 1 && people.every((p) => p.name.trim().length > 0);
+    if (step === 2) return people.every((p) => parseFloat(p.weight) > 0);
+    if (step === 3) return parseFloat(estimatedWeight) > 0;
+    return true;
+  })();
 
-    return { initialShare, yoursCost, fees, diff, diffShareCost, total, n };
-  }, [line, estimatedWeight, people, totalItemsWeight, yourWeight, serviceFees]);
+  const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
+  const back = () => setStep((s) => Math.max(0, s - 1));
+  const reset = () => {
+    setStep(0);
+    setLineId(SHIPPING_LINES[0].id);
+    setPeople([{ name: "You", weight: "" }, { name: "", weight: "" }]);
+    setEstimatedWeight("");
+    setServiceFees("0");
+  };
 
   return (
-    <main className="min-h-screen px-4 py-10 md:py-16">
-      <div className="mx-auto max-w-5xl">
-        <motion.header
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-10 flex items-center gap-3"
+    <main className="min-h-screen px-4 py-6 md:py-12">
+      <div className="mx-auto max-w-2xl">
+        <Header step={step} />
+
+        <div
+          className="border-2 border-foreground bg-card p-5 md:p-8"
+          style={{ boxShadow: "var(--nb-shadow-lg)" }}
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/30">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Haul Split</h1>
-            <p className="text-sm text-muted-foreground">Chinese warehouse agent shipping calculator · CNY</p>
-          </div>
-        </motion.header>
-
-        <div className="grid gap-6 md:grid-cols-5">
-          {/* LEFT — inputs */}
-          <motion.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="md:col-span-3 space-y-6"
-          >
-            <Card>
-              <SectionTitle icon={<Ship className="h-4 w-4" />} label="Shipping line" />
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {SHIPPING_LINES.map((l) => (
-                  <LineOption key={l.id} line={l} selected={lineId === l.id} onSelect={() => setLineId(l.id)} />
-                ))}
-              </div>
-            </Card>
-
-            <Card>
-              <SectionTitle icon={<Scale className="h-4 w-4" />} label="Weights & people" />
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field
-                  label="Agent's estimated total weight"
-                  suffix="g"
-                  value={estimatedWeight}
-                  onChange={setEstimatedWeight}
-                  placeholder="e.g. 12000"
-                />
-                <Field
-                  label="People splitting"
-                  icon={<Users className="h-3.5 w-3.5" />}
-                  value={people}
-                  onChange={setPeople}
-                  placeholder="2"
-                />
-                <Field
-                  label="Sum of everyone's items"
-                  suffix="g"
-                  value={totalItemsWeight}
-                  onChange={setTotalItemsWeight}
-                  placeholder="e.g. 11000"
-                />
-                <Field
-                  label="Your items weight"
-                  suffix="g"
-                  value={yourWeight}
-                  onChange={setYourWeight}
-                  placeholder="e.g. 3500"
-                />
-                <Field
-                  label="Service fees (optional)"
-                  suffix="¥"
-                  value={serviceFees}
-                  onChange={setServiceFees}
-                  placeholder="0"
-                />
-              </div>
-            </Card>
-          </motion.section>
-
-          {/* RIGHT — result */}
-          <motion.aside
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="md:col-span-2"
-          >
-            <div
-              className="sticky top-6 rounded-[var(--radius-xl)] border bg-card p-6"
-              style={{ boxShadow: "var(--shadow-card)" }}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -24 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
             >
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-                <Package className="h-3.5 w-3.5" /> Your share
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={calc.total.toFixed(2)}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="mt-2"
-                >
-                  <div className="text-4xl font-semibold tracking-tight text-primary md:text-5xl">
-                    {fmt(calc.total)}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    on <span className="text-foreground">{line.name}</span> · split {calc.n} ways
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-
-              <div className="my-5 h-px bg-border" />
-
-              <Breakdown label={`Initial fee ÷ ${calc.n}`} value={calc.initialShare} />
-              <Breakdown label={`Your weight × ¥${line.ratePer500g}/500g`} value={calc.yoursCost} />
-              {calc.fees > 0 && <Breakdown label="Service fees" value={calc.fees} />}
-              {calc.diff > 0 && (
-                <Breakdown
-                  label={`Unaccounted ${calc.diff.toFixed(0)}g ÷ ${calc.n}`}
-                  value={calc.diffShareCost}
-                  hint
+              {step === 0 && <StepLine lineId={lineId} setLineId={setLineId} />}
+              {step === 1 && <StepPeople people={people} setPeople={setPeople} />}
+              {step === 2 && <StepWeights people={people} setPeople={setPeople} />}
+              {step === 3 && (
+                <StepEstimate
+                  estimatedWeight={estimatedWeight}
+                  setEstimatedWeight={setEstimatedWeight}
+                  serviceFees={serviceFees}
+                  setServiceFees={setServiceFees}
+                  sumOfPeople={results.sumOfPeople}
                 />
               )}
+              {step === 4 && <StepResult line={line} results={results} />}
+            </motion.div>
+          </AnimatePresence>
 
-              <div className="mt-5 rounded-lg bg-[var(--color-surface-2)] p-3 text-xs text-muted-foreground">
-                {line.id.startsWith("air") ? (
-                  <Plane className="mb-1 inline h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <Ship className="mb-1 inline h-3.5 w-3.5 text-primary" />
-                )}{" "}
-                <span className="text-foreground">{line.name}</span> · ¥{line.initialFee} initial + ¥
-                {line.ratePer500g} per 500g
-              </div>
-            </div>
-          </motion.aside>
+          <div className="mt-8 flex items-center justify-between gap-3">
+            {step > 0 ? (
+              <NbButton variant="ghost" onClick={back}>
+                <ArrowLeft className="h-4 w-4" /> Back
+              </NbButton>
+            ) : (
+              <span />
+            )}
+            {step < STEPS.length - 1 ? (
+              <NbButton onClick={next} disabled={!canNext}>
+                Next <ArrowRight className="h-4 w-4" />
+              </NbButton>
+            ) : (
+              <NbButton onClick={reset} variant="accent">
+                <RotateCcw className="h-4 w-4" /> Start over
+              </NbButton>
+            )}
+          </div>
         </div>
 
-        <footer className="mt-10 text-center text-xs text-muted-foreground">
-          Built for haul splitters · prices in 人民币
+        <footer className="mt-8 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          built for haul splitters · prices in 人民币
         </footer>
       </div>
     </main>
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+/* ---------------- header / progress ---------------- */
+
+function Header({ step }: { step: number }) {
+  return (
+    <header className="mb-6">
+      <div className="mb-4 flex items-center gap-3">
+        <div
+          className="flex h-11 w-11 items-center justify-center border-2 border-foreground bg-primary text-primary-foreground"
+          style={{ boxShadow: "var(--nb-shadow-sm)" }}
+        >
+          <Package className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">HAUL SPLIT</h1>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Chinese warehouse agent calculator
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        {STEPS.map((label, i) => (
+          <div key={label} className="flex flex-1 items-center gap-1.5">
+            <div
+              className={`h-2 flex-1 border-2 border-foreground ${
+                i <= step ? "bg-primary" : "bg-surface"
+              }`}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between text-[10px] font-bold uppercase tracking-wider">
+        {STEPS.map((label, i) => (
+          <span key={label} className={i === step ? "text-primary" : "text-muted-foreground"}>
+            {label}
+          </span>
+        ))}
+      </div>
+    </header>
+  );
+}
+
+/* ---------------- step 0: line ---------------- */
+
+function StepLine({ lineId, setLineId }: { lineId: string; setLineId: (v: string) => void }) {
+  return (
+    <div>
+      <StepTitle q="Which shipping line?" hint="Pick the EMS line your agent quoted." />
+      <div className="mt-5 grid gap-4">
+        {SHIPPING_LINES.map((l) => {
+          const selected = l.id === lineId;
+          return (
+            <motion.button
+              key={l.id}
+              type="button"
+              onClick={() => setLineId(l.id)}
+              whileTap={{ scale: 0.98 }}
+              className={`border-2 border-foreground p-4 text-left transition-all ${
+                selected ? "bg-primary text-primary-foreground" : "bg-surface hover:-translate-y-0.5"
+              }`}
+              style={{ boxShadow: selected ? "var(--nb-shadow)" : "var(--nb-shadow-sm)" }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-base font-bold uppercase tracking-tight">{l.name}</div>
+                  <div
+                    className={`mt-1 text-xs ${
+                      selected ? "text-primary-foreground/80" : "text-muted-foreground"
+                    }`}
+                  >
+                    {l.description}
+                  </div>
+                </div>
+                {selected && (
+                  <div className="flex h-6 w-6 items-center justify-center border-2 border-foreground bg-background text-foreground">
+                    <Check className="h-3.5 w-3.5" />
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] font-mono font-bold uppercase">
+                <Stat label="Initial" value={`¥${l.initialFee}`} dark={selected} />
+                <Stat label={`First ${l.initialCoveredGrams}g`} value="incl." dark={selected} />
+                <Stat label="Op fee" value={`¥${l.operationFee}`} dark={selected} />
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, dark }: { label: string; value: string; dark?: boolean }) {
   return (
     <div
-      className="rounded-[var(--radius-xl)] border bg-card p-6"
-      style={{ boxShadow: "var(--shadow-card)" }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-      {icon} {label}
-    </div>
-  );
-}
-
-function LineOption({
-  line,
-  selected,
-  onSelect,
-}: {
-  line: ShippingLine;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <motion.button
-      type="button"
-      onClick={onSelect}
-      whileTap={{ scale: 0.98 }}
-      className={`relative overflow-hidden rounded-lg border p-4 text-left transition-colors ${
-        selected
-          ? "border-primary bg-primary/10"
-          : "border-border bg-[var(--color-surface)] hover:border-primary/40"
+      className={`border-2 border-foreground px-2 py-1 ${
+        dark ? "bg-background text-foreground" : "bg-surface-2"
       }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-medium">{line.name}</div>
-        {line.id.startsWith("air") ? (
-          <Plane className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <Ship className="h-4 w-4 text-muted-foreground" />
-        )}
-      </div>
-      <div className="mt-0.5 text-xs text-muted-foreground">{line.description}</div>
-      <div className="mt-3 text-xs">
-        <span className="text-foreground">¥{line.initialFee}</span>
-        <span className="text-muted-foreground"> initial · </span>
-        <span className="text-foreground">¥{line.ratePer500g}</span>
-        <span className="text-muted-foreground">/500g</span>
-      </div>
-      {selected && (
-        <motion.div
-          layoutId="line-glow"
-          className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-primary/60"
-          style={{ boxShadow: "var(--shadow-glow)" }}
-        />
-      )}
-    </motion.button>
+      <div className="text-[9px] opacity-70">{label}</div>
+      <div>{value}</div>
+    </div>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  suffix,
-  icon,
+/* ---------------- step 1: people ---------------- */
+
+function StepPeople({
+  people,
+  setPeople,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  suffix?: string;
-  icon?: React.ReactNode;
+  people: Person[];
+  setPeople: (p: Person[]) => void;
 }) {
+  const add = () => setPeople([...people, { name: "", weight: "" }]);
+  const remove = (i: number) =>
+    setPeople(people.length > 1 ? people.filter((_, idx) => idx !== i) : people);
+  const update = (i: number, name: string) =>
+    setPeople(people.map((p, idx) => (idx === i ? { ...p, name } : p)));
+
   return (
-    <label className="block">
-      <div className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-        {icon}
-        {label}
+    <div>
+      <StepTitle
+        q="Who's splitting the haul?"
+        hint="Add a name for everyone in the group, including yourself."
+      />
+      <div className="mt-5 space-y-3">
+        {people.map((p, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-foreground bg-accent font-mono text-sm font-bold">
+              {i + 1}
+            </div>
+            <NbInput
+              value={p.name}
+              onChange={(v) => update(i, v)}
+              placeholder={i === 0 ? "Your name" : `Friend ${i + 1} name`}
+            />
+            {people.length > 1 && (
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                aria-label="Remove person"
+                className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-foreground bg-surface hover:bg-primary hover:text-primary-foreground"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        ))}
       </div>
-      <div className="relative">
-        <input
-          inputMode="decimal"
-          value={value}
-          onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, ""))}
-          placeholder={placeholder}
-          className="w-full rounded-lg border bg-[var(--color-input)] px-3 py-2.5 pr-10 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/30"
-        />
-        {suffix && (
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
-            {suffix}
-          </span>
+      <button
+        type="button"
+        onClick={add}
+        className="mt-4 flex w-full items-center justify-center gap-2 border-2 border-dashed border-foreground bg-surface-2 py-3 text-sm font-bold uppercase tracking-wider hover:bg-accent"
+      >
+        <Plus className="h-4 w-4" /> Add person
+      </button>
+    </div>
+  );
+}
+
+/* ---------------- step 2: weights ---------------- */
+
+function StepWeights({
+  people,
+  setPeople,
+}: {
+  people: Person[];
+  setPeople: (p: Person[]) => void;
+}) {
+  const update = (i: number, weight: string) =>
+    setPeople(
+      people.map((p, idx) =>
+        idx === i ? { ...p, weight: weight.replace(/[^\d.]/g, "") } : p,
+      ),
+    );
+  const sum = people.reduce((s, p) => s + (parseFloat(p.weight) || 0), 0);
+
+  return (
+    <div>
+      <StepTitle
+        q="How much does each person's items weigh?"
+        hint="Enter each person's item weight in grams (g)."
+      />
+      <div className="mt-5 space-y-3">
+        {people.map((p, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="flex h-11 min-w-11 items-center justify-center border-2 border-foreground bg-accent px-3 font-mono text-sm font-bold">
+              {p.name || `#${i + 1}`}
+            </div>
+            <NbInput
+              value={p.weight}
+              onChange={(v) => update(i, v)}
+              placeholder="e.g. 3500"
+              suffix="g"
+              inputMode="decimal"
+            />
+          </div>
+        ))}
+      </div>
+      <div
+        className="mt-5 flex items-center justify-between border-2 border-foreground bg-surface-2 p-3 text-sm font-bold uppercase"
+        style={{ boxShadow: "var(--nb-shadow-sm)" }}
+      >
+        <span>Sum of items</span>
+        <span className="font-mono">{sum.toLocaleString()} g</span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- step 3: estimate ---------------- */
+
+function StepEstimate({
+  estimatedWeight,
+  setEstimatedWeight,
+  serviceFees,
+  setServiceFees,
+  sumOfPeople,
+}: {
+  estimatedWeight: string;
+  setEstimatedWeight: (v: string) => void;
+  serviceFees: string;
+  setServiceFees: (v: string) => void;
+  sumOfPeople: number;
+}) {
+  const est = parseFloat(estimatedWeight) || 0;
+  const diff = Math.max(0, est - sumOfPeople);
+  return (
+    <div>
+      <StepTitle
+        q="What's the agent's estimated total weight?"
+        hint="This is the total weight your warehouse agent quoted (packaging adds weight)."
+      />
+      <div className="mt-5 space-y-4">
+        <Labeled label="Agent's estimated total">
+          <NbInput
+            value={estimatedWeight}
+            onChange={(v) => setEstimatedWeight(v.replace(/[^\d.]/g, ""))}
+            placeholder="e.g. 12000"
+            suffix="g"
+            inputMode="decimal"
+          />
+        </Labeled>
+        <Labeled label="Service fees (optional, total ¥)">
+          <NbInput
+            value={serviceFees}
+            onChange={(v) => setServiceFees(v.replace(/[^\d.]/g, ""))}
+            placeholder="0"
+            suffix="¥"
+            inputMode="decimal"
+          />
+        </Labeled>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Mini label="Sum of items" value={`${sumOfPeople.toLocaleString()} g`} />
+          <Mini
+            label="Unaccounted"
+            value={`${diff.toLocaleString()} g`}
+            highlight={diff > 0}
+          />
+        </div>
+        {diff > 0 && (
+          <p className="text-xs text-muted-foreground">
+            The extra <span className="font-bold text-foreground">{diff.toLocaleString()}g</span>{" "}
+            (packaging / mis-estimate) is split evenly across everyone.
+          </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function Mini({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div
+      className={`border-2 border-foreground p-3 ${
+        highlight ? "bg-primary text-primary-foreground" : "bg-surface-2"
+      }`}
+    >
+      <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">{label}</div>
+      <div className="mt-0.5 font-mono text-base font-bold">{value}</div>
+    </div>
+  );
+}
+
+/* ---------------- step 4: results ---------------- */
+
+function StepResult({
+  line,
+  results,
+}: {
+  line: ShippingLine;
+  results: ReturnType<typeof computeShares>;
+}) {
+  return (
+    <div>
+      <StepTitle q="Here's everyone's share" hint={`On ${line.name} · all prices in CNY`} />
+      <div className="mt-5 space-y-3">
+        {results.shares.map((s, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="border-2 border-foreground bg-surface p-4"
+            style={{ boxShadow: "var(--nb-shadow-sm)" }}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <div>
+                <div className="text-base font-bold uppercase">{s.name}</div>
+                <div className="font-mono text-[11px] text-muted-foreground">
+                  {s.weight.toLocaleString()} g
+                </div>
+              </div>
+              <div className="font-mono text-2xl font-bold text-primary">{fmt(s.total)}</div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px] font-mono md:grid-cols-4">
+              <Tag label="Initial ÷" value={fmt(s.initialShare)} />
+              <Tag label="Weight" value={fmt(s.weightCost)} />
+              <Tag label="Op fee" value={fmt(s.opFee)} />
+              <Tag label="Extra ÷" value={fmt(s.diffShare + s.serviceShare)} />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <div
+        className="mt-5 border-2 border-foreground bg-foreground p-4 text-background"
+        style={{ boxShadow: "var(--nb-shadow-red)" }}
+      >
+        <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
+          <span>Group total</span>
+          <span className="font-mono text-xl text-primary">{fmt(results.grandTotal)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Tag({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-foreground bg-surface-2 px-2 py-1">
+      <div className="text-[9px] uppercase opacity-70">{label}</div>
+      <div className="font-bold">{value}</div>
+    </div>
+  );
+}
+
+/* ---------------- primitives ---------------- */
+
+function StepTitle({ q, hint }: { q: string; hint?: string }) {
+  return (
+    <div>
+      <h2 className="text-xl font-bold leading-tight md:text-2xl">{q}</h2>
+      {hint && <p className="mt-1.5 text-sm text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      {children}
     </label>
   );
 }
 
-function Breakdown({ label, value, hint }: { label: string; value: number; hint?: boolean }) {
+function NbInput({
+  value,
+  onChange,
+  placeholder,
+  suffix,
+  inputMode,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  suffix?: string;
+  inputMode?: "text" | "decimal";
+}) {
   return (
-    <div className="flex items-baseline justify-between py-1.5 text-sm">
-      <span className={hint ? "text-muted-foreground" : "text-foreground/90"}>{label}</span>
-      <span className="font-medium tabular-nums">{fmt(value)}</span>
+    <div className="relative w-full">
+      <input
+        value={value}
+        inputMode={inputMode ?? "text"}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-11 w-full border-2 border-foreground bg-input px-3 pr-10 text-base font-medium outline-none transition-shadow placeholder:text-muted-foreground/60 focus:bg-accent/40"
+        style={{ boxShadow: "var(--nb-shadow-sm)" }}
+      />
+      {suffix && (
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs font-bold text-muted-foreground">
+          {suffix}
+        </span>
+      )}
     </div>
   );
+}
+
+function NbButton({
+  children,
+  onClick,
+  disabled,
+  variant = "primary",
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "primary" | "ghost" | "accent";
+}) {
+  const styles =
+    variant === "primary"
+      ? "bg-primary text-primary-foreground"
+      : variant === "accent"
+        ? "bg-accent text-accent-foreground"
+        : "bg-surface text-foreground";
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      whileTap={disabled ? undefined : { scale: 0.97, x: 3, y: 3, boxShadow: "0 0 0 0 #000" }}
+      className={`inline-flex items-center gap-2 border-2 border-foreground px-4 py-2.5 text-sm font-bold uppercase tracking-wider transition-all ${styles} disabled:cursor-not-allowed disabled:opacity-40`}
+      style={{ boxShadow: disabled ? "var(--nb-shadow-sm)" : "var(--nb-shadow)" }}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
+/* ---------------- calculation ---------------- */
+
+function computeShares(
+  line: ShippingLine,
+  people: Person[],
+  estimatedWeight: string,
+  serviceFees: string,
+) {
+  const n = Math.max(1, people.length);
+  const est = parseFloat(estimatedWeight) || 0;
+  const fees = parseFloat(serviceFees) || 0;
+  const weights = people.map((p) => parseFloat(p.weight) || 0);
+  const sumOfPeople = weights.reduce((a, b) => a + b, 0);
+  const diff = Math.max(0, est - sumOfPeople);
+
+  // Initial fee covers the first `initialCoveredGrams` of the TOTAL shipment.
+  // Each person gets an equal share of that covered weight.
+  const coveredPerPerson = line.initialCoveredGrams / n;
+  const initialShare = line.initialFee / n;
+  const diffShare = (line.ratePer500g * (diff / 500)) / n;
+  const serviceShare = fees / n;
+
+  const shares = people.map((p, i) => {
+    const w = weights[i];
+    const billable = Math.max(0, w - coveredPerPerson);
+    const weightCost = line.ratePer500g * (billable / 500);
+    const opFee = line.operationFee;
+    const total = initialShare + weightCost + opFee + diffShare + serviceShare;
+    return {
+      name: p.name || `Person ${i + 1}`,
+      weight: w,
+      initialShare,
+      weightCost,
+      opFee,
+      diffShare,
+      serviceShare,
+      total,
+    };
+  });
+
+  const grandTotal = shares.reduce((s, x) => s + x.total, 0);
+  return { shares, sumOfPeople, grandTotal };
 }
