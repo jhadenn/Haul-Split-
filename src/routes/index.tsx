@@ -53,7 +53,10 @@ function Index() {
     if (step === 0) return !!lineId;
     if (step === 1) return people.length >= 1 && people.every((p) => p.name.trim().length > 0);
     if (step === 2) return people.every((p) => parseFloat(p.weight) > 0);
-    if (step === 3) return parseFloat(estimatedWeight) > 0;
+    if (step === 3) {
+      const est = parseFloat(estimatedWeight) || 0;
+      return est > 0 && est >= results.sumOfPeople;
+    }
     return true;
   })();
 
