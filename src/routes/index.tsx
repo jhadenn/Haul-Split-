@@ -43,12 +43,10 @@ function Index() {
 
   const line = SHIPPING_LINES.find((l) => l.id === lineId)!;
 
-  const results = useMemo(() => computeShares(line, people, estimatedWeight, serviceFees), [
-    line,
-    people,
-    estimatedWeight,
-    serviceFees,
-  ]);
+  const results = useMemo(
+    () => computeShares(line, people, estimatedWeight, serviceFees),
+    [line, people, estimatedWeight, serviceFees],
+  );
 
   const canNext = (() => {
     if (step === 0) return !!lineId;
@@ -66,7 +64,10 @@ function Index() {
   const reset = () => {
     setStep(0);
     setLineId(SHIPPING_LINES[0].id);
-    setPeople([{ name: "You", weight: "" }, { name: "", weight: "" }]);
+    setPeople([
+      { name: "You", weight: "" },
+      { name: "", weight: "" },
+    ]);
     setEstimatedWeight("");
     setServiceFees("0");
     setAgentTotalCost("");
@@ -77,10 +78,7 @@ function Index() {
       <div className="mx-auto max-w-2xl">
         <Header step={step} />
 
-        <div
-          className="border-2 border-foreground bg-card p-5 md:p-8"
-          style={{ boxShadow: "var(--nb-shadow-lg)" }}
-        >
+        <div className="border-2 border-foreground bg-card p-5 md:p-8" style={{ boxShadow: "var(--nb-shadow-lg)" }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
@@ -128,7 +126,7 @@ function Index() {
         </div>
 
         <footer className="mt-8 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          built for haul splitters · prices in 人民币
+          built for the boys · prices in 人民币
         </footer>
       </div>
     </main>
@@ -158,11 +156,7 @@ function Header({ step }: { step: number }) {
       <div className="flex items-center gap-1.5">
         {STEPS.map((label, i) => (
           <div key={label} className="flex flex-1 items-center gap-1.5">
-            <div
-              className={`h-2 flex-1 border-2 border-foreground ${
-                i <= step ? "bg-primary" : "bg-surface"
-              }`}
-            />
+            <div className={`h-2 flex-1 border-2 border-foreground ${i <= step ? "bg-primary" : "bg-surface"}`} />
           </div>
         ))}
       </div>
@@ -200,11 +194,7 @@ function StepLine({ lineId, setLineId }: { lineId: string; setLineId: (v: string
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-base font-bold uppercase tracking-tight">{l.name}</div>
-                  <div
-                    className={`mt-1 text-xs ${
-                      selected ? "text-primary-foreground/80" : "text-muted-foreground"
-                    }`}
-                  >
+                  <div className={`mt-1 text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                     {l.description}
                   </div>
                 </div>
@@ -229,11 +219,7 @@ function StepLine({ lineId, setLineId }: { lineId: string; setLineId: (v: string
 
 function Stat({ label, value, dark }: { label: string; value: string; dark?: boolean }) {
   return (
-    <div
-      className={`border-2 border-foreground px-2 py-1 ${
-        dark ? "bg-background text-foreground" : "bg-surface-2"
-      }`}
-    >
+    <div className={`border-2 border-foreground px-2 py-1 ${dark ? "bg-background text-foreground" : "bg-surface-2"}`}>
       <div className="text-[9px] opacity-70">{label}</div>
       <div>{value}</div>
     </div>
@@ -242,25 +228,14 @@ function Stat({ label, value, dark }: { label: string; value: string; dark?: boo
 
 /* ---------------- step 1: people ---------------- */
 
-function StepPeople({
-  people,
-  setPeople,
-}: {
-  people: Person[];
-  setPeople: (p: Person[]) => void;
-}) {
+function StepPeople({ people, setPeople }: { people: Person[]; setPeople: (p: Person[]) => void }) {
   const add = () => setPeople([...people, { name: "", weight: "" }]);
-  const remove = (i: number) =>
-    setPeople(people.length > 1 ? people.filter((_, idx) => idx !== i) : people);
-  const update = (i: number, name: string) =>
-    setPeople(people.map((p, idx) => (idx === i ? { ...p, name } : p)));
+  const remove = (i: number) => setPeople(people.length > 1 ? people.filter((_, idx) => idx !== i) : people);
+  const update = (i: number, name: string) => setPeople(people.map((p, idx) => (idx === i ? { ...p, name } : p)));
 
   return (
     <div>
-      <StepTitle
-        q="Who's splitting the haul?"
-        hint="Add a name for everyone in the group, including yourself."
-      />
+      <StepTitle q="Who's splitting the haul?" hint="Add a name for everyone in the group, including yourself." />
       <div className="mt-5 space-y-3">
         {people.map((p, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -298,27 +273,14 @@ function StepPeople({
 
 /* ---------------- step 2: weights ---------------- */
 
-function StepWeights({
-  people,
-  setPeople,
-}: {
-  people: Person[];
-  setPeople: (p: Person[]) => void;
-}) {
+function StepWeights({ people, setPeople }: { people: Person[]; setPeople: (p: Person[]) => void }) {
   const update = (i: number, weight: string) =>
-    setPeople(
-      people.map((p, idx) =>
-        idx === i ? { ...p, weight: weight.replace(/[^\d.]/g, "") } : p,
-      ),
-    );
+    setPeople(people.map((p, idx) => (idx === i ? { ...p, weight: weight.replace(/[^\d.]/g, "") } : p)));
   const sum = people.reduce((s, p) => s + (parseFloat(p.weight) || 0), 0);
 
   return (
     <div>
-      <StepTitle
-        q="How much does each person's items weigh?"
-        hint="Enter each person's item weight in grams (g)."
-      />
+      <StepTitle q="How much does each person's items weigh?" hint="Enter each person's item weight in grams (g)." />
       <div className="mt-5 space-y-3">
         {people.map((p, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -413,16 +375,12 @@ function StepEstimate({
 
         <div className="grid grid-cols-2 gap-3">
           <Mini label="Sum of items" value={`${sumOfPeople.toLocaleString()} g`} />
-          <Mini
-            label="Unaccounted"
-            value={`${diff.toLocaleString()} g`}
-            highlight={diff > 0}
-          />
+          <Mini label="Unaccounted" value={`${diff.toLocaleString()} g`} highlight={diff > 0} />
         </div>
         {diff > 0 && (
           <p className="text-xs text-muted-foreground">
-            The extra <span className="font-bold text-foreground">{diff.toLocaleString()}g</span>{" "}
-            (packaging / mis-estimate) is split evenly across everyone.
+            The extra <span className="font-bold text-foreground">{diff.toLocaleString()}g</span> (packaging /
+            mis-estimate) is split evenly across everyone.
           </p>
         )}
       </div>
@@ -433,9 +391,7 @@ function StepEstimate({
 function Mini({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div
-      className={`border-2 border-foreground p-3 ${
-        highlight ? "bg-primary text-primary-foreground" : "bg-surface-2"
-      }`}
+      className={`border-2 border-foreground p-3 ${highlight ? "bg-primary text-primary-foreground" : "bg-surface-2"}`}
     >
       <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">{label}</div>
       <div className="mt-0.5 font-mono text-base font-bold">{value}</div>
@@ -473,9 +429,7 @@ function StepResult({
             <div className="flex items-baseline justify-between gap-3">
               <div>
                 <div className="text-base font-bold uppercase">{s.name}</div>
-                <div className="font-mono text-[11px] text-muted-foreground">
-                  {s.weight.toLocaleString()} g
-                </div>
+                <div className="font-mono text-[11px] text-muted-foreground">{s.weight.toLocaleString()} g</div>
               </div>
               <div className="font-mono text-2xl font-bold text-primary">{fmt(s.total)}</div>
             </div>
@@ -500,10 +454,7 @@ function StepResult({
       </div>
 
       {hasAgentCost && (
-        <div
-          className="mt-3 border-2 border-foreground bg-surface p-4"
-          style={{ boxShadow: "var(--nb-shadow-sm)" }}
-        >
+        <div className="mt-3 border-2 border-foreground bg-surface p-4" style={{ boxShadow: "var(--nb-shadow-sm)" }}>
           <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
             <span>Agent quoted</span>
             <span className="font-mono text-xl">{fmt(agentCost)}</span>
@@ -551,9 +502,7 @@ function StepTitle({ q, hint }: { q: string; hint?: string }) {
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
+      <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
       {children}
     </label>
   );
@@ -624,12 +573,7 @@ function NbButton({
 
 /* ---------------- calculation ---------------- */
 
-function computeShares(
-  line: ShippingLine,
-  people: Person[],
-  estimatedWeight: string,
-  serviceFees: string,
-) {
+function computeShares(line: ShippingLine, people: Person[], estimatedWeight: string, serviceFees: string) {
   const n = Math.max(1, people.length);
   const est = parseFloat(estimatedWeight) || 0;
   const fees = parseFloat(serviceFees) || 0;
