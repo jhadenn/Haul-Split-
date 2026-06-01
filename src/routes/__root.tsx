@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Haul Split" },
+      { name: "description", content: "Built by Jhaden. Easily split superbuy hauls with your friends!" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Haul Split" },
+      { property: "og:description", content: "Built by Jhaden. Easily split superbuy hauls with your friends!" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Haul Split" },
+      { name: "twitter:description", content: "Built by Jhaden. Easily split superbuy hauls with your friends!" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b832b751-85d2-4822-bf2e-aa2d49d36a37/id-preview-61f8a34d--88aa1398-664d-405d-9773-fe8bc71fb975.lovable.app-1780330319285.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b832b751-85d2-4822-bf2e-aa2d49d36a37/id-preview-61f8a34d--88aa1398-664d-405d-9773-fe8bc71fb975.lovable.app-1780330319285.png" },
     ],
     links: [
       {
