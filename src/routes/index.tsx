@@ -106,7 +106,7 @@ function Index() {
                   sumOfPeople={results.sumOfPeople}
                 />
               )}
-              {step === 4 && <StepResult line={line} results={results} agentTotalCost={agentTotalCost} />}
+              {step === 4 && <StepResult line={line} results={results} agentTotalCost={agentTotalCost} currency={currency} setCurrency={setCurrency} />}
             </motion.div>
           </AnimatePresence>
 
