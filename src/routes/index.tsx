@@ -18,12 +18,16 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("zh-CN", {
+const CAD_RATE = 0.19; // Approximate CNY→CAD rate
+
+const fmt = (n: number, currency: "CNY" | "CAD" = "CNY") => {
+  const val = currency === "CAD" ? n * CAD_RATE : n;
+  return new Intl.NumberFormat(currency === "CAD" ? "en-CA" : "zh-CN", {
     style: "currency",
-    currency: "CNY",
+    currency,
     maximumFractionDigits: 2,
-  }).format(Number.isFinite(n) ? n : 0);
+  }).format(Number.isFinite(val) ? val : 0);
+};
 
 type Person = { name: string; weight: string };
 
