@@ -75,6 +75,7 @@ function Index() {
     setEstimatedWeight("");
     setServiceFees("0");
     setAgentTotalCost("");
+    setCurrency("CNY");
   };
 
   return (
