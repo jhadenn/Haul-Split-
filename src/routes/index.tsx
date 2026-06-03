@@ -410,17 +410,27 @@ function StepResult({
   line,
   results,
   agentTotalCost,
+  currency,
+  setCurrency,
 }: {
   line: ShippingLine;
   results: ReturnType<typeof computeShares>;
   agentTotalCost: string;
+  currency: "CNY" | "CAD";
+  setCurrency: (c: "CNY" | "CAD") => void;
 }) {
   const agentCost = parseFloat(agentTotalCost) || 0;
   const diff = agentCost - results.grandTotal;
   const hasAgentCost = agentCost > 0;
   return (
     <div>
-      <StepTitle q="Here's everyone's share" hint={`On ${line.name} · all prices in CNY`} />
+      <div className="flex items-center justify-between gap-3">
+        <StepTitle
+          q="Here's everyone's share"
+          hint={`On ${line.name} · all prices in ${currency}`}
+        />
+        <CurrencyToggle currency={currency} setCurrency={setCurrency} />
+      </div>
       <div className="mt-5 space-y-3">
         {results.shares.map((s, i) => (
           <motion.div
@@ -436,13 +446,13 @@ function StepResult({
                 <div className="text-base font-bold uppercase">{s.name}</div>
                 <div className="font-mono text-[11px] text-muted-foreground">{s.weight.toLocaleString()} g</div>
               </div>
-              <div className="font-mono text-2xl font-bold text-primary">{fmt(s.total)}</div>
+              <div className="font-mono text-2xl font-bold text-primary">{fmt(s.total, currency)}</div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px] font-mono md:grid-cols-4">
-              <Tag label="Initial ÷" value={fmt(s.initialShare)} />
-              <Tag label="Weight" value={fmt(s.weightCost)} />
-              <Tag label="Op fee" value={fmt(s.opFee)} />
-              <Tag label="Packaging weight" value={fmt(s.diffShare + s.serviceShare)} />
+              <Tag label="Initial ÷" value={fmt(s.initialShare, currency)} />
+              <Tag label="Weight" value={fmt(s.weightCost, currency)} />
+              <Tag label="Op fee" value={fmt(s.opFee, currency)} />
+              <Tag label="Packaging weight" value={fmt(s.diffShare + s.serviceShare, currency)} />
             </div>
           </motion.div>
         ))}
@@ -454,7 +464,7 @@ function StepResult({
       >
         <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
           <span>Group total</span>
-          <span className="font-mono text-xl text-primary">{fmt(results.grandTotal)}</span>
+          <span className="font-mono text-xl text-primary">{fmt(results.grandTotal, currency)}</span>
         </div>
       </div>
 
@@ -462,14 +472,14 @@ function StepResult({
         <div className="mt-3 border-2 border-foreground bg-surface p-4" style={{ boxShadow: "var(--nb-shadow-sm)" }}>
           <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
             <span>Agent quoted</span>
-            <span className="font-mono text-xl">{fmt(agentCost)}</span>
+            <span className="font-mono text-xl">{fmt(agentCost, currency)}</span>
           </div>
           {Math.abs(diff) > 0.01 && (
             <div
               className={`mt-2 flex items-center justify-between border-2 border-foreground p-2 text-xs font-bold uppercase ${diff > 0 ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}
             >
               <span>{diff > 0 ? "Agent quoted higher by" : "You calculated higher by"}</span>
-              <span className="font-mono">{fmt(Math.abs(diff))}</span>
+              <span className="font-mono">{fmt(Math.abs(diff), currency)}</span>
             </div>
           )}
           {Math.abs(diff) <= 0.01 && (
@@ -480,6 +490,37 @@ function StepResult({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function CurrencyToggle({
+  currency,
+  setCurrency,
+}: {
+  currency: "CNY" | "CAD";
+  setCurrency: (c: "CNY" | "CAD") => void;
+}) {
+  return (
+    <div className="flex border-2 border-foreground" style={{ boxShadow: "var(--nb-shadow-sm)" }}>
+      <button
+        type="button"
+        onClick={() => setCurrency("CNY")}
+        className={`px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider ${
+          currency === "CNY" ? "bg-primary text-primary-foreground" : "bg-surface text-foreground"
+        }`}
+      >
+        ¥
+      </button>
+      <button
+        type="button"
+        onClick={() => setCurrency("CAD")}
+        className={`px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider ${
+          currency === "CAD" ? "bg-primary text-primary-foreground" : "bg-surface text-foreground"
+        }`}
+      >
+        $
+      </button>
     </div>
   );
 }
